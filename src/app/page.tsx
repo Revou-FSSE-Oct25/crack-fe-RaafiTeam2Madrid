@@ -146,7 +146,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-8 relative z-10">
           <div className="mb-20 text-center reveal-on-scroll opacity-0 translate-y-10 transition-all duration-700">
             <h2 className="text-4xl md:text-5xl font-serif text-white tracking-tight mb-4">
-              Siklus Hidup <span className="italic text-[#2358d8]">Rekod.</span>
+              Siklus Hidup <span className="italic text-[#2358d8]">Arsip.</span>
             </h2>
             <p className="text-slate-500 text-[10px] font-black tracking-[0.2em] uppercase">
               Perjalanan Dokumen dari Penciptaan hingga Penyusutan
@@ -283,7 +283,7 @@ export default function LandingPage() {
           <p className="text-slate-400 text-lg md:text-xl leading-relaxed max-w-3xl mx-auto mb-16 reveal-on-scroll opacity-0 translate-y-10 duration-700 delay-200 font-serif italic">
             "Sistem ini dirancang secara eksklusif untuk Coorporate Purpose,
             memberikan kendali penuh atas autentisitas, reliabilitas,
-            integritas, dan kebergunaan setiap rekod elektronik sesuai dengan
+            integritas, dan kebergunaan setiap arsip elektronik sesuai dengan
             prinsip kearsipan berstandar functional requirement ICA Module 2."
           </p>
 

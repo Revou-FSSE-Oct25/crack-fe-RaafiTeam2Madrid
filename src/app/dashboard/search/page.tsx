@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 
+// Sesuai dengan archive.entity.ts
 interface Archive {
   id: string;
-  code: string;
-  title: string;
-  category: string;
+  code: string; 
+  title: string;         
+  category: string;      
   fileUrl: string;
-  uploadDate: string;
+  uploadDate: string; 
 }
 
 export default function SearchPage() {
@@ -21,34 +22,37 @@ export default function SearchPage() {
     setLoading(true);
     try {
       const res = await fetch(`http://localhost:3001/archives/search?q=${query}&category=${category}`);
-      const data = await res.json();
-      setResults(data);
+      if (res.ok) {
+        const data = await res.json();
+        setResults(data);
+      } else {
+        setResults([]);
+      }
     } catch (e) {
       console.error("Gagal mencari:", e);
+      setResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Jalankan pencarian otomatis saat kategori berubah
   useEffect(() => {
     handleSearch();
   }, [category]);
 
-  // Fungsi pintar untuk menentukan warna berdasarkan kategori arsip
   const getCategoryColor = (cat: string) => {
+    if (!cat) return 'bg-[#2358d8] shadow-blue-900/50';
     const lowerCat = cat.toLowerCase();
-    if (lowerCat === 'aktif') return 'bg-[#0a8270] shadow-teal-900/50'; // Hijau Teal
-    if (lowerCat === 'inaktif') return 'bg-[#411b99] shadow-purple-900/50'; // Ungu Tua
-    if (lowerCat === 'vital') return 'bg-[#eb3434] shadow-red-900/50'; // Merah
-    return 'bg-[#2358d8] shadow-blue-900/50'; // Biru default
+    if (lowerCat === 'aktif') return 'bg-[#0a8270] shadow-teal-900/50'; 
+    if (lowerCat === 'inaktif') return 'bg-[#ffe227] text-black shadow-yellow-900/50'; 
+    if (lowerCat === 'vital') return 'bg-[#eb3434] shadow-red-900/50'; 
+    return 'bg-[#2358d8] shadow-blue-900/50'; 
   };
 
   return (
-    <div className="text-slate-200 font-sans min-h-full">
+    <div className="text-slate-200 font-sans min-h-full animate-[fadeIn_0.5s_ease-out]">
       
-      {/* HEADER PENCARIAN */}
-      <div className="mb-12">
+      <div className="mb-12 border-b border-white/5 pb-6">
         <h1 className="text-4xl md:text-5xl font-serif text-white tracking-tight mb-2">
           Pencarian <span className="italic text-[#ffe227]">Terpadu.</span>
         </h1>
@@ -57,14 +61,10 @@ export default function SearchPage() {
         </p>
       </div>
 
-      {/* --- KOTAK KENDALI PENCARIAN (Glassmorphism Gelap) --- */}
       <div className="bg-[#1a1a1a] rounded-[2.5rem] p-8 border border-white/5 shadow-2xl relative overflow-hidden mb-10">
-        
-        {/* Ornamen Cahaya Kuning */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[#ffe227]/5 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="flex flex-col md:flex-row gap-4 relative z-10">
-          {/* Input Teks */}
           <div className="flex-1 relative">
             <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 text-lg">🔍</span>
             <input 
@@ -77,7 +77,6 @@ export default function SearchPage() {
             />
           </div>
           
-          {/* Dropdown Kategori */}
           <select 
             className="px-6 py-5 bg-[#111111] border border-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest outline-none focus:border-[#ffe227] cursor-pointer shadow-inner appearance-none min-w-[200px]"
             value={category}
@@ -89,17 +88,16 @@ export default function SearchPage() {
             <option value="Vital">Arsip Vital</option>
           </select>
           
-          {/* Tombol Eksekusi */}
           <button 
             onClick={handleSearch}
-            className="px-10 py-5 bg-[#ffe227] hover:bg-yellow-400 text-black font-black rounded-2xl transition-all shadow-lg shadow-yellow-500/10 uppercase tracking-[0.2em] text-xs hover:-translate-y-1"
+            disabled={loading}
+            className="px-10 py-5 bg-[#ffe227] hover:bg-yellow-400 text-black font-black rounded-2xl transition-all shadow-lg shadow-yellow-500/10 uppercase tracking-[0.2em] text-xs hover:-translate-y-1 disabled:opacity-50 disabled:hover:translate-y-0"
           >
-            Cari Berkas
+            {loading ? 'Mencari...' : 'Cari Berkas'}
           </button>
         </div>
       </div>
 
-      {/* --- DAFTAR HASIL PENCARIAN --- */}
       <div className="space-y-4">
         {loading ? (
           <div className="text-center py-20">
@@ -110,9 +108,8 @@ export default function SearchPage() {
             <div key={archive.id} className="p-6 bg-[#1a1a1a] border border-white/5 rounded-[2rem] hover:border-white/20 transition-all group flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
               
               <div className="flex items-center gap-6 overflow-hidden w-full">
-                {/* Ikon Map Berwarna Dinamis */}
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-lg flex-shrink-0 transition-transform group-hover:scale-105 ${getCategoryColor(archive.category)}`}>
-                  {archive.code.split('.')[0]}
+                  {archive.code ? archive.code.split('.')[0] : 'ARS'}
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -123,13 +120,12 @@ export default function SearchPage() {
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{archive.category}</span>
                     <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
                     <span className="text-[10px] font-mono uppercase tracking-widest text-slate-600">
-                      {new Date(archive.uploadDate).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'})}
+                      {archive.uploadDate ? new Date(archive.uploadDate).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) : '-'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Tombol Lihat Berkas */}
               {archive.fileUrl && (
                 <a 
                   href={`http://localhost:3001/uploads/${archive.fileUrl}`} 

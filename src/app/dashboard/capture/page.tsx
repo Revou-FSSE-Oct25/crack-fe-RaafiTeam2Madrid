@@ -7,6 +7,7 @@ export default function CapturePage() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Aktif');
   const [description, setDescription] = useState('');
+  const [retentionDate, setRetentionDate] = useState(''); // <-- STATE BARU UNTUK TANGGAL RETENSI
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +19,7 @@ export default function CapturePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: action,
-          performedBy: 'Arsiparis / Admin Aktif', // Idealnya ambil dari User Session/Cookie
+          performedBy: 'Aditya Admin', // Menggunakan nama Admin yang sudah kita buat
           targetId: targetId,
           details: details
         })
@@ -37,6 +38,12 @@ export default function CapturePage() {
     formData.append('title', title);
     formData.append('category', category);
     formData.append('description', description);
+    
+    // Pastikan tanggal retensi dikirim ke Backend jika diisi
+    if (retentionDate) {
+      formData.append('retentionDate', retentionDate); 
+    }
+    
     if (file) formData.append('file', file);
 
     try {
@@ -54,7 +61,8 @@ export default function CapturePage() {
         );
 
         alert('Arsip dan PDF Berhasil Diregistrasi!');
-        setCode(''); setTitle(''); setDescription(''); setFile(null);
+        // Reset form termasuk tanggal retensi
+        setCode(''); setTitle(''); setDescription(''); setRetentionDate(''); setFile(null);
       } else {
         const errorData = await res.json();
         alert(`Gagal: ${errorData.message || 'Cek kembali isian Anda'}`);
@@ -70,7 +78,7 @@ export default function CapturePage() {
     <div className="text-slate-200 font-sans min-h-full">
       
       {/* HEADER CAPTURE */}
-      <div className="mb-12">
+      <div className="mb-12 animate-[fadeIn_0.5s_ease-out]">
         <h1 className="text-4xl md:text-5xl font-serif text-white tracking-tight mb-2">
           Capture <span className="italic text-[#0a8270]">Arsip Baru.</span>
         </h1>
@@ -80,7 +88,7 @@ export default function CapturePage() {
       </div>
 
       {/* KONTAINER FORM (Glassmorphism Gelap) */}
-      <div className="max-w-4xl bg-[#1a1a1a] rounded-[2.5rem] p-8 md:p-12 border border-white/5 shadow-2xl relative overflow-hidden">
+      <div className="max-w-4xl bg-[#1a1a1a] rounded-[2.5rem] p-8 md:p-12 border border-white/5 shadow-2xl relative overflow-hidden animate-[fadeIn_0.7s_ease-out]">
         
         {/* Ornamen Latar Belakang Form */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#0a8270]/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -92,7 +100,7 @@ export default function CapturePage() {
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Kode Klasifikasi</label>
               <input 
                 type="text" required value={code} onChange={(e)=>setCode(e.target.value)} 
-                className="w-full p-4 bg-[#111111] border border-slate-800 text-white rounded-2xl focus:outline-none focus:border-[#0a8270] focus:ring-1 focus:ring-[#0a8270] transition-all font-mono text-sm placeholder:text-slate-700 shadow-inner" 
+                className="w-full p-4 bg-[#111111] border border-slate-800 text-white rounded-2xl focus:outline-none focus:border-[#0a8270] focus:ring-1 focus:ring-[#0a8270] transition-all font-mono text-sm placeholder:text-slate-700 shadow-inner uppercase" 
                 placeholder="SKP.01.02" 
               />
             </div>
@@ -101,7 +109,7 @@ export default function CapturePage() {
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Kategori Saat Ini</label>
               <select 
                 value={category} onChange={(e)=>setCategory(e.target.value)} 
-                className="w-full p-4 bg-[#111111] border border-slate-800 text-white rounded-2xl focus:outline-none focus:border-[#0a8270] focus:ring-1 focus:ring-[#0a8270] transition-all font-mono text-sm shadow-inner appearance-none"
+                className="w-full p-4 bg-[#111111] border border-slate-800 text-white rounded-2xl focus:outline-none focus:border-[#0a8270] focus:ring-1 focus:ring-[#0a8270] transition-all font-mono text-sm shadow-inner appearance-none cursor-pointer"
               >
                 <option value="Aktif">Arsip Aktif</option>
                 <option value="Inaktif">Arsip Inaktif</option>
@@ -117,6 +125,23 @@ export default function CapturePage() {
               className="w-full p-4 bg-[#111111] border border-slate-800 text-white rounded-2xl focus:outline-none focus:border-[#0a8270] focus:ring-1 focus:ring-[#0a8270] transition-all font-mono text-sm placeholder:text-slate-700 shadow-inner" 
               placeholder="Masukkan Judul Dokumen yang merepresentasikan isi..." 
             />
+          </div>
+
+          {/* INPUT RETENSI BARU - Highlight Merah untuk Penanda JRA */}
+          <div className="space-y-2 border border-dashed border-[#eb3434]/30 p-5 rounded-3xl bg-[#eb3434]/5 group hover:border-[#eb3434]/50 transition-colors">
+            <label className="text-[10px] font-black text-[#eb3434] uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+              <span>Jadwal Retensi JRA</span>
+              <span className="bg-[#eb3434] text-white px-2 py-0.5 rounded-full text-[8px]">Otomatis Terhubung ke Penyusutan</span>
+            </label>
+            <input 
+              type="date" 
+              value={retentionDate} 
+              onChange={(e)=>setRetentionDate(e.target.value)} 
+              className="w-full p-4 bg-[#111111] border border-[#eb3434]/20 text-white rounded-2xl focus:outline-none focus:border-[#eb3434] focus:ring-1 focus:ring-[#eb3434] transition-all font-mono text-sm shadow-inner cursor-pointer" 
+            />
+            <p className="text-slate-500 text-[9px] mt-2 font-mono uppercase ml-1">
+              *Kosongkan kolom ini jika arsip bersifat Permanen (tidak memiliki jadwal musnah).
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -135,7 +160,7 @@ export default function CapturePage() {
                 type="file" accept=".pdf" onChange={(e)=>setFile(e.target.files?.[0] || null)} 
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
               />
-              <div className={`w-full p-6 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl transition-all duration-300 ${
+              <div className={`w-full p-6 flex flex-col items-center justify-center border-2 border-dashed rounded-3xl transition-all duration-300 ${
                 file ? 'bg-[#0a8270]/20 border-[#0a8270] text-[#0a8270]' : 'bg-[#111111] border-slate-700 text-slate-500 group-hover:border-slate-500'
               }`}>
                 <span className="text-3xl mb-2">{file ? '📄' : '📥'}</span>

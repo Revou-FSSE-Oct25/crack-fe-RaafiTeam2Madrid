@@ -1,175 +1,153 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 
-interface DisposalItem {
+// STRUKTUR DATA DIPERBAIKI: Menyesuaikan dengan Entity Backend NestJS
+interface Archive {
   id: string;
-  code: string;
-  title: string;
-  statusJRA: string;
-  action: string;
-  inactiveDate: string;
-  finalDate: string;
+  code: string;        // Disesuaikan dari kodeKlasifikasi
+  title: string;       // Disesuaikan dari judul
+  category: string;    // Disesuaikan dari kategori
+  uploadDate: string;  // Disesuaikan dari tanggalDibuat
+  statusJRA?: string; 
 }
 
 export default function DisposalPage() {
-  const [items, setItems] = useState<DisposalItem[]>([]);
+  const [items, setItems] = useState<Archive[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDisposal = async () => {
     try {
-      const res = await fetch('http://localhost:3001/archives/disposal');
+      const res = await fetch('http://localhost:3001/archives');
       const data = await res.json();
-      setItems(data.filter((i: any) => i.statusJRA !== 'Masih Aktif'));
-    } catch (e) { 
-      console.error(e); 
-    } finally { 
-      setLoading(false); 
+
+      if (Array.isArray(data)) {
+        
+        const processedData = data.map((item: Archive) => {
+          let calculatedJRA = 'Masih Aktif';
+          
+          // MENGGUNAKAN item.category SESUAI BACKEND
+          const kategoriAman = item.category || ''; 
+          
+          if (kategoriAman.toUpperCase() === 'INAKTIF') {
+            calculatedJRA = 'Musnah'; 
+          } else if (kategoriAman.toUpperCase() === 'VITAL') {
+            calculatedJRA = 'Permanen'; 
+          }
+
+          return { ...item, statusJRA: calculatedJRA };
+        });
+
+        const disposalCandidates = processedData.filter(i => i.statusJRA !== 'Masih Aktif');
+        setItems(disposalCandidates);
+      } else {
+        console.error('Data dari backend bukan array:', data);
+        setItems([]);
+      }
+    } catch (e) {
+      console.error('Gagal mengambil data penyusutan:', e);
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => { fetchDisposal(); }, []);
+  useEffect(() => {
+    fetchDisposal();
+  }, []);
 
-  // KUNCI INTEGRASI: Fungsi ini dipertahankan utuh untuk menembak API Audit Log
-  const handleExecute = async (item: DisposalItem) => {
-    if (!confirm(`Konfirmasi tindakan ${item.action} untuk arsip: ${item.title}?`)) return;
-    
-    try {
-      if (item.action === 'MUSNAHKAN') {
-        // 1. Eksekusi pemusnahan di backend
-        await fetch(`http://localhost:3001/archives/${item.id}`, { method: 'DELETE' });
-
-        // 2. Catat ke Audit Log secara otomatis
-        await fetch('http://localhost:3001/audit', { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pengguna: 'Aditya Admin', 
-            aksi: 'DESTROY_ARCHIVE',
-            targetId: 'SYSTEM',
-            detailAktivitas: `Mengeksekusi pemusnahan arsip: ${item.title} (${item.code})`
-          })
-        });
-      } else if (item.action === 'PERMANENKAN' || item.action === 'DINILAI KEMBALI') {
-        // Logika untuk mencatat jika arsip dipermanenkan
-        await fetch('http://localhost:3001/audit', { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pengguna: 'Aditya Admin', 
-            aksi: 'RETAIN_ARCHIVE',
-            targetId: 'SYSTEM',
-            detailAktivitas: `Menetapkan status permanen/dinilai kembali untuk arsip: ${item.title} (${item.code})`
-          })
-        });
-      }
-      
-      alert(`Tindakan ${item.action} berhasil dieksekusi dan dicatat di Audit Log.`);
-      fetchDisposal();
-    } catch (error) {
-      console.error("Gagal mengeksekusi:", error);
-      alert("Terjadi kesalahan saat mencatat ke Audit Log.");
-    }
+  const getStatusStyle = (status?: string) => {
+    if (status === 'Musnah') return 'bg-[#eb3434]/20 text-[#eb3434] border-[#eb3434]/50 shadow-[0_0_15px_rgba(235,52,52,0.3)]';
+    if (status === 'Permanen') return 'bg-[#ffe227]/20 text-[#ffe227] border-[#ffe227]/50';
+    return 'bg-slate-800 text-slate-300 border-slate-600';
   };
 
   return (
-    <div className="text-slate-200 font-sans min-h-full">
+    <div className="space-y-8 animate-[fadeIn_0.5s_ease-out]">
       
-      {/* HEADER PENYUSUTAN */}
-      <div className="mb-12">
-        <h1 className="text-4xl md:text-5xl font-serif text-white tracking-tight mb-2">
-          Pusat <span className="italic text-[#eb3434]">Penyusutan Arsip.</span>
-        </h1>
-        <p className="text-slate-500 text-[10px] font-black tracking-[0.2em] uppercase">
-          Eksekusi Jadwal Retensi Arsip (JRA)
-        </p>
-      </div>
-
-      {/* KONTAINER UTAMA (Glassmorphism Gelap) */}
-      <div className="bg-[#1a1a1a] rounded-[2.5rem] p-8 md:p-10 border border-white/5 shadow-2xl relative overflow-hidden">
-        
-        {/* Ornamen Latar Belakang Peringatan */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#eb3434]/10 rounded-full blur-[100px] pointer-events-none"></div>
-
-        <div className="relative z-10">
-          {loading ? (
-            <div className="text-center py-20">
-              <p className="font-serif text-xl italic tracking-widest text-[#eb3434] animate-pulse">Menghitung batas retensi dokumen...</p>
-            </div>
-          ) : items.length === 0 ? (
-            <div className="p-20 border border-dashed border-white/10 rounded-[3rem] text-center bg-[#111111]">
-              <span className="text-4xl block mb-4 opacity-50">🛡️</span>
-              <p className="text-slate-500 font-mono font-bold uppercase tracking-widest text-xs">Semua arsip masih dalam masa retensi aman.</p>
-            </div>
-          ) : (
-            <div className="grid gap-6">
-              {items.map((item) => {
-                const isMusnah = item.action === 'MUSNAHKAN';
-                
-                // Menghindari error "Invalid Date" jika datanya kosong/salah format
-                const finalDateObj = new Date(item.finalDate);
-                const displayDate = isNaN(finalDateObj.getTime()) 
-                  ? 'Format Tanggal Invalid' 
-                  : finalDateObj.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
-
-                return (
-                  <div key={item.id} className={`p-6 md:p-8 rounded-[2rem] border flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all shadow-xl group relative overflow-hidden ${
-                    isMusnah ? 'bg-[#111111] border-red-900/30 hover:border-red-500/50' : 'bg-[#111111] border-yellow-900/30 hover:border-yellow-500/50'
-                  }`}>
-                    
-                    {/* Aksen cahaya tipis di pinggir card saat di-hover */}
-                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none ${
-                      isMusnah ? 'bg-gradient-to-r from-[#eb3434] to-transparent' : 'bg-gradient-to-r from-[#ffe227] to-transparent'
-                    }`}></div>
-
-                    {/* INFO ARSIP */}
-                    <div className="flex gap-6 items-center relative z-10 w-full md:w-auto">
-                      {/* Ikon Map Kode */}
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-sm shadow-lg flex-shrink-0 ${
-                        isMusnah ? 'bg-[#eb3434] text-white shadow-red-900/50' : 'bg-[#ffe227] text-black shadow-yellow-900/50'
-                      }`}>
-                        {item.code.split('.')[0]}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-bold text-white tracking-tight truncate">{item.title}</h3>
-                        <div className="flex items-center gap-3 mt-2 flex-wrap">
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
-                            Status: <span className={isMusnah ? 'text-rose-400' : 'text-amber-400'}>{item.statusJRA}</span>
-                          </p>
-                          <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
-                            Nasib: <span className="text-white">{item.action}</span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* AKSI & TANGGAL */}
-                    <div className="flex items-center justify-between md:justify-end gap-8 relative z-10 border-t border-white/5 md:border-0 pt-4 md:pt-0">
-                      <div className="text-left md:text-right">
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Batas Akhir</p>
-                        <p className="text-xs font-mono font-bold text-slate-300">{displayDate}</p>
-                      </div>
-                      
-                      <button 
-                        onClick={() => handleExecute(item)}
-                        className={`px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-lg hover:-translate-y-1 ${
-                          isMusnah 
-                            ? 'bg-[#eb3434] text-white hover:bg-red-700 shadow-red-900/20' 
-                            : 'bg-[#ffe227] text-black hover:bg-yellow-400 shadow-yellow-900/20'
-                        }`}
-                      >
-                        Eksekusi {item.action}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-6">
+        <div>
+          <h1 className="text-3xl font-serif text-white tracking-tight mb-2">Penyusutan <span className="italic text-[#eb3434]">Arsip.</span></h1>
+          <p className="text-slate-500 text-[10px] font-black tracking-[0.2em] uppercase">
+            Manajemen Jadwal Retensi dan Eksekusi Rekod
+          </p>
         </div>
       </div>
+
+      {/* Tabel Data Premium */}
+      <div className="bg-[#1a1a1a] rounded-[2rem] border border-white/5 overflow-hidden shadow-2xl relative">
+        
+        {/* Garis Aksen Merah Tanda Bahaya (Destruction Zone) */}
+        <div className="h-1 w-full bg-gradient-to-r from-[#eb3434] via-[#111111] to-[#eb3434] opacity-50"></div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#111111] border-b border-white/5">
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Kode Klasifikasi</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Judul & Deskripsi Rekod</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Tanggal Dibuat</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Rekomendasi JRA</th>
+                <th className="p-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Tindakan Eksekusi</th>
+              </tr>
+            </thead>
+            
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="p-10 text-center text-slate-500 font-mono text-xs uppercase tracking-widest">
+                    Menganalisis jadwal retensi institusi...
+                  </td>
+                </tr>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-10 text-center text-slate-500 font-mono text-xs uppercase tracking-widest">
+                    Brankas bersih. Tidak ada arsip yang memasuki masa penyusutan.
+                  </td>
+                </tr>
+              ) : (
+                items.map((arsip) => (
+                  <tr key={arsip.id} className="hover:bg-white/5 transition-colors group">
+                    {/* Menggunakan arsip.code */}
+                    <td className="p-6 font-mono text-xs text-white/80 font-bold">{arsip.code || 'N/A'}</td>
+                    
+                    <td className="p-6">
+                      {/* Menggunakan arsip.title dan arsip.category */}
+                      <p className="text-white font-semibold text-sm mb-1">{arsip.title}</p>
+                      <p className="text-slate-500 text-[10px] font-mono uppercase tracking-widest">Kategori Awal: {arsip.category || 'Tanpa Kategori'}</p>
+                    </td>
+                    
+                    <td className="p-6 font-mono text-xs text-slate-400">
+                      {/* Menggunakan arsip.uploadDate */}
+                      {arsip.uploadDate ? new Date(arsip.uploadDate).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) : '-'}
+                    </td>
+                    
+                    <td className="p-6">
+                      <span className={`px-3 py-1.5 rounded-lg border text-[9px] font-black uppercase tracking-widest ${getStatusStyle(arsip.statusJRA)}`}>
+                        {arsip.statusJRA}
+                      </span>
+                    </td>
+                    
+                    <td className="p-6 text-right">
+                      {arsip.statusJRA === 'Musnah' ? (
+                        <button className="px-5 py-2 bg-[#111111] hover:bg-[#eb3434] text-[#eb3434] hover:text-white border border-[#eb3434]/30 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-[0_0_10px_rgba(235,52,52,0)] hover:shadow-[0_0_15px_rgba(235,52,52,0.4)]">
+                          Eksekusi Musnah
+                        </button>
+                      ) : (
+                        <button className="px-5 py-2 bg-[#111111] hover:bg-[#ffe227] text-[#ffe227] hover:text-black border border-[#ffe227]/30 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-[0_0_10px_rgba(255,226,39,0)] hover:shadow-[0_0_15px_rgba(255,226,39,0.4)]">
+                          Serahkan ke ANRI
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 }

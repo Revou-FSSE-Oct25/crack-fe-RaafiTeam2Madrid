@@ -114,9 +114,9 @@ export default function LoginPage() {
 
           <div className="mt-10 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
             <p className="text-slate-500 text-[10px] font-black tracking-[0.2em] uppercase">
-              Belum memiliki akses? <Link href="/register" className="text-[#ffe227] hover:text-white transition-colors ml-2">Register</Link>
+              Belum memiliki akses? <Link href="/register" className="text-[#ffe227] hover:text-white transition-colors ml-2">Daftar Kredensial Baru</Link>
             </p>
-            <Link href="/" className="text-slate-600 hover:text-white text-[9px] font-black tracking-[0.2em] uppercase transition-colors"> Kembali ke Beranda</Link>
+            <Link href="/" className="text-slate-600 hover:text-white text-[9px] font-black tracking-[0.2em] uppercase transition-colors">← Kembali ke Beranda</Link>
           </div>
         </div>
 
